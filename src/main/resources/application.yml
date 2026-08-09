@@ -1,0 +1,11 @@
+spring:
+  profiles:
+    include:
+      - database
+      - mail
+      - cloudinary
+      - jwt
+mapstruct:
+  componentModel: spring
+fileUpload:
+  rootPath: uploads/

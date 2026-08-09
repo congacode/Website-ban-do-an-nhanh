@@ -1,0 +1,147 @@
+package com.foodproject.fooddelivery.service;
+
+import com.foodproject.fooddelivery.dto.UsersDTO;
+import com.foodproject.fooddelivery.entity.Roles;
+import com.foodproject.fooddelivery.entity.Users;
+import com.foodproject.fooddelivery.mapper.UserMapper;
+import com.foodproject.fooddelivery.payload.ResponseData;
+import com.foodproject.fooddelivery.payload.request.SignUpRequest;
+import com.foodproject.fooddelivery.repository.UsersRepository;
+import com.foodproject.fooddelivery.service.imp.LoginServiceImp;
+import com.foodproject.fooddelivery.service.imp.UserServiceImp;
+import com.foodproject.fooddelivery.utils.JwtUtilHelper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+public class LoginService implements LoginServiceImp {
+
+    @Autowired
+    private UsersRepository usersRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtilHelper jwtUtilHelper;
+
+    @Autowired
+    private UserServiceImp userServiceImp;
+
+    @Override
+    public List<UsersDTO> getAllUser() {
+        List<Users> listUser=usersRepository.findAll();
+        List<UsersDTO> usersDTOList=new ArrayList<>();
+        for(Users users:listUser){
+            UsersDTO usersDTO=new UsersDTO();
+            usersDTO.setId(users.getId());
+            usersDTO.setUserName(users.getUserName());
+            usersDTO.setPassword(users.getPassword());
+            usersDTO.setFullName(users.getFullName());
+            usersDTO.setCreateDate(users.getCreateDate());
+            usersDTOList.add(usersDTO);
+        }
+        return usersDTOList;
+    }
+
+    @Override
+    public ResponseData checkLogin(String usernameOrEmail, String password) {
+        ResponseData responseData = new ResponseData();
+        try {
+            Users user = usersRepository.findFirstByUserNameOrEmail(usernameOrEmail, usernameOrEmail);
+            if(user!=null && passwordEncoder.matches(password, user.getPassword())){
+                List<String> roles = new ArrayList<>();
+            roles.add(user.getRoles().getRoleName());
+            String token = jwtUtilHelper.generateTokens(user.getUserName(), roles);
+            UsersDTO usersDTO = userServiceImp.findUserByUsername(user.getUserName());
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("user", usersDTO);
+
+            responseData.setData(response);
+            responseData.setSuccess(true);
+        } else{
+            responseData.setData("Sai tai khoan hoac mat khau!");
+            responseData.setSuccess(false);
+        }
+        } catch(Exception e) {
+            e.printStackTrace();
+            responseData.setData("Lỗi hệ thống: " + e.getMessage());
+            responseData.setSuccess(false);
+        }
+        return responseData;
+    }
+
+    @Override
+    public Boolean isPhoneExists(String phone) {
+        return usersRepository.existsByUserName(phone);
+    }
+
+    @Override
+    public Boolean isEmailExists(String email) {
+        return usersRepository.existsByEmail(email);
+    }
+
+    @Override
+    public ResponseData addUser(SignUpRequest signUpRequest) {
+        ResponseData responseData = new ResponseData();
+        if(isEmailExists(signUpRequest.getEmail()) && isPhoneExists(signUpRequest.getPhone())){
+            responseData.setSuccess(false);
+            responseData.setExist(true);
+            responseData.setDescription("Tài khoản đã tồn tại");
+            return responseData;
+        }
+        if(isEmailExists(signUpRequest.getEmail())){
+            responseData.setSuccess(false);
+            responseData.setExist(true);
+            responseData.setDescription("Email đã được sử dụng");
+            return responseData;
+        }
+        if (isPhoneExists(signUpRequest.getPhone())) {
+            responseData.setSuccess(false);
+            responseData.setExist(true);
+            responseData.setDescription("Số điện thoại đã được sử dụng");
+            return responseData;
+        }
+        Roles roles=new Roles();
+        int roleId = signUpRequest.getRoleId() > 0 ? signUpRequest.getRoleId() : 2;
+        roles.setId(roleId);
+        Users users=new Users();
+        users.setFullName(signUpRequest.getFullName());
+        users.setUserName(signUpRequest.getPhone());
+        users.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
+        users.setStatus(1);
+        users.setRoles(roles);
+        users.setEmail(signUpRequest.getEmail());
+        users.setListOrders(new HashSet<>());
+        users.setAddress(signUpRequest.getAddressDetail()+", "+signUpRequest.getWard()+", "+signUpRequest.getDistrict()+", "+signUpRequest.getProvince());
+        users.setCreateDate(signUpRequest.getJoinDate());
+        try {
+            usersRepository.save(users);
+            Users savedUser = usersRepository.findFirstByUserNameOrEmail(users.getUserName(), users.getEmail());
+            String roleName = "USER";
+            if (savedUser != null && savedUser.getRoles() != null && savedUser.getRoles().getRoleName() != null) {
+                roleName = savedUser.getRoles().getRoleName();
+            }
+            List<String> rolesList = new ArrayList<>();
+            rolesList.add(roleName);
+            String token = jwtUtilHelper.generateTokens(users.getUserName(), rolesList);
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("user", UserMapper.toUsersDTO(savedUser != null ? savedUser : users));
+
+            responseData.setData(response);
+            responseData.setExist(false);
+            responseData.setSuccess(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+            responseData.setSuccess(false);
+            responseData.setExist(false);
+            responseData.setData("Lỗi chi tiết: " + e.getMessage());
+        }
+        return responseData;
+    }
+}
