@@ -124,20 +124,13 @@ src/main/java/com/foodproject/fooddelivery/
 
 ### **Installation**
 
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/nguyenquyen1910/Food-Delivery-Project.git
-   cd food-delivery-system
-   ```
-
-2. **Database Setup**
+1. **Database Setup**
 
    ```sql
    CREATE DATABASE food_delivery;
    ```
 
-3. **Configuration**
+2. **Configuration**
 
    - Copy configuration example files:
 
@@ -153,13 +146,13 @@ src/main/java/com/foodproject/fooddelivery/
      - Gmail SMTP settings
      - JWT secret key
 
-4. **Run the application**
+3. **Run the application**
 
    ```bash
    mvn spring-boot:run
    ```
 
-5. **Access the application**
+4. **Access the application**
 
    - Customer Portal: `http://localhost:8080`
    - Admin Dashboard: `http://localhost:8080/admin`
@@ -287,8 +280,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Your Name**
 
-- GitHub: /khanhnm1401
-- Email: akhanhdepzai@gmail.com
+- GitHub: https://github.com/congacode
+- Email: btmanh.cntt@gmail.com
 
 ## 🙏 Acknowledgments
 
